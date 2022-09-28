@@ -90,7 +90,7 @@ def update_status_stale(stat, last_update_time):
 
     stat.values.pop(0)
     stat.values.pop(0)
-    stat.values.insert(0, KeyValue(key = 'Update Status', value = stale_status))
+    stat.values.insert(0, KeyValue(key = 'Update Status', value = str(stale_status)))
     stat.values.insert(1, KeyValue(key = 'Time Since Update', value = str(time_since_update)))
 
 
@@ -155,7 +155,7 @@ class CPUMonitor():
                     self._temps_timer.cancel()
 
             self.check_temps()
-        except Exception, e:
+        except Exception as e:
             rospy.logerr('Unable to restart temp thread. Error: %s' % traceback.format_exc())
 
 
@@ -184,6 +184,8 @@ class CPUMonitor():
             p = subprocess.Popen(cmd, stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE, shell = True)
             stdout, stderr = p.communicate()
+            stdout = stdout.decode()
+            stderr = stderr.decode()
             retcode = p.returncode
 
             if retcode != 0:
@@ -194,7 +196,7 @@ class CPUMonitor():
                 return diag_vals, diag_msgs, diag_level
 
             tmp = stdout.strip()
-            if unicode(tmp).isnumeric():
+            if str(tmp).isnumeric():
                 temp = float(tmp) / 1000
                 diag_vals.append(KeyValue(key = 'Core %d Temperature' % index, value = str(temp)+"DegC"))
 
@@ -221,6 +223,7 @@ class CPUMonitor():
                                 stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE, shell = True)
             stdout, stderr = p.communicate()
+            stdout = stdout.decode()
             retcode = p.returncode
 
             if retcode != 0:
@@ -239,7 +242,7 @@ class CPUMonitor():
                 speed = words[1].strip().split('.')[0] # Conversion to float doesn't work with decimal
                 vals.append(KeyValue(key = 'Core %d Clock Speed' % index, value = speed+"MHz"))
 
-        except Exception, e:
+        except Exception as e:
             rospy.logerr(traceback.format_exc())
             lvl = DiagnosticStatus.ERROR
             msgs.append('Exception')
@@ -260,6 +263,7 @@ class CPUMonitor():
             p = subprocess.Popen('uptime', stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE, shell = True)
             stdout, stderr = p.communicate()
+            stdout = stdout.decode()
             retcode = p.returncode
 
             if retcode != 0:
@@ -280,7 +284,7 @@ class CPUMonitor():
             vals.append(KeyValue(key = 'Load Average (5min)', value = str(load5*1e2)+"%"))
             vals.append(KeyValue(key = 'Load Average (15min)', value = str(load15*1e2)+"%"))
 
-        except Exception, e:
+        except Exception as e:
             rospy.logerr(traceback.format_exc())
             level = DiagnosticStatus.ERROR
             vals.append(KeyValue(key = 'Load Average Status', value = traceback.format_exc()))
@@ -299,6 +303,7 @@ class CPUMonitor():
                                 stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE, shell = True)
             stdout, stderr = p.communicate()
+            stdout = stdout.decode()
             retcode = p.returncode
             if retcode != 0:
                 if not self._has_warned_mpstat:
@@ -376,7 +381,7 @@ class CPUMonitor():
                 self._num_cores = num_cores
                 return DiagnosticStatus.WARN, 'Incorrect number of CPU cores', vals
 
-        except Exception, e:
+        except Exception as e:
             mp_level = DiagnosticStatus.ERROR
             vals.append(KeyValue(key = 'mpstat Exception', value = str(e)))
 
@@ -391,6 +396,7 @@ class CPUMonitor():
                                 stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE, shell = True)
             stdout, stderr = p.communicate()
+            stdout = stdout.decode()
             retcode = p.returncode
 
             if retcode != 0:
@@ -540,7 +546,7 @@ if __name__ == '__main__':
             cpu_node.publish_stats()
     except KeyboardInterrupt:
         pass
-    except Exception, e:
+    except Exception as e:
         traceback.print_exc()
         rospy.logerr(traceback.format_exc())
 

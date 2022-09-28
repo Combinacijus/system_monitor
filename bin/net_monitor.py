@@ -79,9 +79,8 @@ def update_status_stale(stat, last_update_time):
     stat.level = max(stat.level, DiagnosticStatus.ERROR)
   stat.values.pop(0)
   stat.values.pop(0)
-  stat.values.insert(0, KeyValue(key = 'Update Status', value = stale_status))
-  stat.values.insert(1, KeyValue(key = 'Time Since Update',
-    value = str(time_since_update)))
+  stat.values.insert(0, KeyValue(key = 'Update Status', value = str(stale_status)))
+  stat.values.insert(1, KeyValue(key = 'Time Since Update', value = str(time_since_update)))
 
 def get_sys_net_stat(iface, sys):
   cmd = 'cat /sys/class/net/%s/statistics/%s' %(iface, sys)
@@ -89,6 +88,7 @@ def get_sys_net_stat(iface, sys):
                        stdout = subprocess.PIPE,
                        stderr = subprocess.PIPE, shell = True)
   stdout, stderr = p.communicate()
+  stdout = stdout.decode()
   return (p.returncode, stdout.strip())
 
 def get_sys_net(iface, sys):
@@ -97,6 +97,7 @@ def get_sys_net(iface, sys):
                        stdout = subprocess.PIPE,
                        stderr = subprocess.PIPE, shell = True)
   stdout, stderr = p.communicate()
+  stdout = stdout.decode()
   return (p.returncode, stdout.strip())
 
 class NetMonitor():
@@ -111,10 +112,8 @@ class NetMonitor():
     self._usage_stat.level = 1
     self._usage_stat.hardware_id = hostname
     self._usage_stat.message = 'No Data'
-    self._usage_stat.values = [KeyValue(key = 'Update Status',
-                               value = 'No Data' ),
-                               KeyValue(key = 'Time Since Last Update',
-                               value = 'N/A') ]
+    self._usage_stat.values = [KeyValue(key = 'Update Status', value = 'No Data' ),
+                               KeyValue(key = 'Time Since Last Update', value = 'N/A')]
     self._last_usage_time = 0
     self._last_publish_time = 0
     self.check_usage()
@@ -131,6 +130,7 @@ class NetMonitor():
                            stdout = subprocess.PIPE,
                            stderr = subprocess.PIPE, shell = True)
       stdout, stderr = p.communicate()
+      stdout = stdout.decode()
       retcode = p.returncode
       if retcode == 3:
         values.append(KeyValue(key = "\"ifstat -q -S 1 1\" Call Error",
@@ -186,7 +186,7 @@ class NetMonitor():
         (retcode, cmd_out) = get_sys_net_stat(ifaces[i], 'tx_errors')
         if retcode == 0:
           values.append(KeyValue(key = 'Tx Errors', value = cmd_out))
-    except Exception, e:
+    except Exception as e:
       rospy.logerr(traceback.format_exc())
       msg = 'Network Usage Check Error'
       values.append(KeyValue(key = msg, value = str(e)))
@@ -216,6 +216,7 @@ class NetMonitor():
       self._usage_stat.level = diag_level
       self._usage_stat.values = diag_vals
       self._usage_stat.message = usage_msg
+      
       if not rospy.is_shutdown():
         self._usage_timer = threading.Timer(5.0, self.check_usage)
         self._usage_timer.start()
@@ -228,6 +229,7 @@ class NetMonitor():
       msg = DiagnosticArray()
       msg.header.stamp = rospy.get_rostime()
       msg.status.append(self._usage_stat)
+      
       if rospy.get_time() - self._last_publish_time > 0.5:
         self._diag_pub.publish(msg)
         self._last_publish_time = rospy.get_time()
@@ -259,7 +261,7 @@ if __name__ == '__main__':
       net_node.publish_stats()
   except KeyboardInterrupt:
     pass
-  except Exception, e:
+  except Exception as e:
     traceback.print_exc()
     rospy.logerr(traceback.format_exc())
   net_node.cancel_timers()
